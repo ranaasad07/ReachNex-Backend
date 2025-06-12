@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/instagram', router);
+app.use('/ReachNex', router);
 connectDB(process.env.MONGODB_URI);
 
 const PORT = process.env.PORT || 5000;
