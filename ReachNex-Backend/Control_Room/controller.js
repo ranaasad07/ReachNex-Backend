@@ -4,7 +4,7 @@ const sendEmail = require('../Email_sending_file/sendEmail');
 const { User } = require('../Database_Modal/modals');
 
 const SignUp = async (req, res) => {
-  const { username, fullName, email, password } = req.body;
+  const { fullName, email, password } = req.body;
 
   try {
     const existingUser = await User.findOne({ email });
@@ -12,13 +12,16 @@ const SignUp = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const Otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    let code = String.fromCharCode(97 + Math.floor(Math.random()*26)) + Array.from({length:7},()=>Math.floor(Math.random()*10)).join('') + String.fromCharCode(97 + Math.floor(Math.random()*26));
+    let randomUsername = fullName + "-" + code; 
+
+    const Otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log("Generated OTP:", Otp);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
-      username,
+      username: randomUsername,
       fullName,
       email,
       password: hashedPassword,
@@ -36,6 +39,7 @@ const SignUp = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 const emailVerification = async (req, res) => {
   const { email, otp } = req.body;
