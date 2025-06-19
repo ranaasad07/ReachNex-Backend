@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./Mongo_Connection/connectdb');
-const router = require('./Routes/route.js');
+const router = require('./Routes/authenticationRoute');
 
 const app = express();
 
