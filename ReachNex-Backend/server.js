@@ -2,14 +2,16 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./Mongo_Connection/connectdb');
-const router = require('./Routes/authenticationRoute');
+
+const authenticationRoute = require('./Routes/authenticationRoute');
+const postRoute = require("./Routes/postRoute")
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use('/ReachNex', router);
+app.use('/ReachNex', authenticationRoute);
 connectDB(process.env.MONGODB_URI);
 
 const PORT = process.env.PORT || 5000;
