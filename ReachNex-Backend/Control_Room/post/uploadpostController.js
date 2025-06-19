@@ -1,3 +1,9 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const sendEmail = require('../../Email_sending_file/sendEmail');
+const { User } = require('../../Database_Modal/modals');
+const {Post} = require("../../Database_Modal/postModal")
+
 
 const uploadingPost = async (req, res) => {
   try {

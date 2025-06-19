@@ -1,7 +1,7 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const sendEmail = require('../Email_sending_file/sendEmail');
-const { User } = require('../Database_Modal/modals');
+// const bcrypt = require('bcryptjs');
+// const jwt = require('jsonwebtoken');
+// const sendEmail = require('../Email_sending_file/sendEmail');
+// const { User } = require('../Database_Modal/modals');
 
 // const SignUp = async (req, res) => {
 //   const { fullName, email, password } = req.body;
@@ -142,87 +142,87 @@ const { User } = require('../Database_Modal/modals');
 //   }
 // };
 
-const getUsernames = async (req, res) => {
-  try {
-    const { mail } = req.params;
+// const getUsernames = async (req, res) => {
+//   try {
+//     const { mail } = req.params;
 
-    const findUser = await User.findOne({ email: mail }); // ✅ Correct query
+//     const findUser = await User.findOne({ email: mail }); // ✅ Correct query
 
-    if (!findUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.status(200).json({
-      username: findUser.username,
-      fullName: findUser.fullName,
-      profilePic: findUser.profilePicture,
-      gender:findUser.gender,
-      bio:findUser.bio,
-      showSuggestions:findUser.showSuggestions
-    });
-
-
-  } catch (err) {
-    console.error('Error fetching user:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-const changeProfilePic = async (req, res) => {
-  try {
-    const { email, profilePicture } = req.body;
-
-    const updatedUser = await User.findOneAndUpdate(
-      { email },
-      { profilePicture: profilePicture },
-      { new: true }
-    );
-
-    if (updatedUser) {
-      return res.status(200).json({ message: 'Profile picture changed', user: updatedUser });
-    } else {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-  } catch (err) {
-    console.error('Error updating profile picture:', err);
-    return res.status(500).json({ message: 'Could not change profile picture' });
-  }
-};
-
-const userEditing = async (req, res) => {
-  try {
-    const { email, bio, gender, showSuggestions } = req.body;
-
-    const updateBio = await User.findOneAndUpdate(
-      { email }, // filter by email
-      {
-        bio,
-        gender,
-        showSuggestions,
-      },
-      { new: true }
-    );
-
-    if (updateBio) {
-      res.status(200).json(updateBio);
-    } else {
-      res.status(404).json({ message: 'User not found or update failed' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error updating bio', error: err.message });
-  }
-};
+//     if (!findUser) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+//     res.status(200).json({
+//       username: findUser.username,
+//       fullName: findUser.fullName,
+//       profilePic: findUser.profilePicture,
+//       gender:findUser.gender,
+//       bio:findUser.bio,
+//       showSuggestions:findUser.showSuggestions
+//     });
 
 
-module.exports = {
-  // SignUp,
-  // Login,
-  // emailVerification,
-  // userVerification,
-  // updatePassword,
-  getUsernames,
-  changeProfilePic,
-  userEditing
-};
+//   } catch (err) {
+//     console.error('Error fetching user:', err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// };
+
+// const changeProfilePic = async (req, res) => {
+//   try {
+//     const { email, profilePicture } = req.body;
+
+//     const updatedUser = await User.findOneAndUpdate(
+//       { email },
+//       { profilePicture: profilePicture },
+//       { new: true }
+//     );
+
+//     if (updatedUser) {
+//       return res.status(200).json({ message: 'Profile picture changed', user: updatedUser });
+//     } else {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//   } catch (err) {
+//     console.error('Error updating profile picture:', err);
+//     return res.status(500).json({ message: 'Could not change profile picture' });
+//   }
+// };
+
+// const userEditing = async (req, res) => {
+//   try {
+//     const { email, bio, gender, showSuggestions } = req.body;
+
+//     const updateBio = await User.findOneAndUpdate(
+//       { email }, // filter by email
+//       {
+//         bio,
+//         gender,
+//         showSuggestions,
+//       },
+//       { new: true }
+//     );
+
+//     if (updateBio) {
+//       res.status(200).json(updateBio);
+//     } else {
+//       res.status(404).json({ message: 'User not found or update failed' });
+//     }
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error updating bio', error: err.message });
+//   }
+// };
+
+
+// module.exports = {
+//   // SignUp,
+//   // Login,
+//   // emailVerification,
+//   // userVerification,
+//   // updatePassword,
+//   // getUsernames,
+//   // changeProfilePic,
+//   // userEditing
+// };
 
