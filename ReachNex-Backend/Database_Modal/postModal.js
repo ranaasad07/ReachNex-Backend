@@ -8,11 +8,25 @@ const postSchema = new mongoose.Schema({
   },
   mediaUrl: String,
   caption: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+
+  // 👍 Likes
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+  // 💬 Comments
+  comments: [
+    {
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      text: String,
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+}, { timestamps: true }); // auto adds createdAt & updatedAt
 
 const Post = mongoose.model("Post", postSchema);
 module.exports = { Post };

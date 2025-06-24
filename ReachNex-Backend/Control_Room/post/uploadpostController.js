@@ -25,3 +25,24 @@ const uploadingPost = async (req, res) => {
 };
 
 module.exports = { uploadingPost };
+
+
+// const getAllPost = async (req, res) => {
+//   try {
+//     const allPost = await Post.find({}).populate("userId", "username profilePic");
+
+//     if (!allPost || allPost.length === 0) {
+//       return res.status(404).json({ message: "No posts found" });
+//     }
+
+//     return res.status(200).json({
+//       message: "All posts fetched successfully",
+//       posts: allPost,
+//     });
+//   } catch (error) {
+//     console.log("Get posts error:", error);
+//     res.status(500).json({ message: "Something went wrong while fetching posts" });
+//   }
+// };
+
+// module.exports = { getAllPost };
