@@ -1,4 +1,3 @@
-
 const { Post } = require("../../Database_Modal/postModal");
 
 const likePost = async (req, res) => {
@@ -24,12 +23,12 @@ const likePost = async (req, res) => {
 
     await post.save();
 
-    console.log(" Like Updated:", post.likes);
+    console.log("Like Updated:", post.likes);
     req.io.emit("likeUpdated", { postId: post._id, likes: post.likes });
 
     res.status(200).json({ likes: post.likes });
   } catch (err) {
-    console.error(" Like Server Error:", err);
+    console.error("Like Server Error:", err);
     res.status(500).json({ message: "Server Error" });
   }
 };
@@ -54,10 +53,23 @@ const commentPost = async (req, res) => {
     post.comments.push(newComment);
     await post.save();
 
-    console.log("Comment Added:", newComment);
-    req.io.emit("commentAdded", { postId: post._id, comment: newComment });
+    // 🔁 Re-fetch post to populate latest comment's user info
+    const updatedPost = await Post.findById(postId).populate(
+      "comments.userId",
+      "username profilePicture"
+    );
 
-    res.status(200).json({ comments: post.comments });
+    const latestComment = updatedPost.comments[updatedPost.comments.length - 1];
+
+    console.log("Comment Added:", latestComment);
+
+    // 🔥 Emit to all sockets
+    req.io.emit("commentAdded", {
+      postId: post._id,
+      comment: latestComment,
+    });
+
+    res.status(200).json({ message: "Comment added", comment: latestComment });
   } catch (err) {
     console.error("Comment Server Error:", err);
     res.status(500).json({ message: "Server Error" });
