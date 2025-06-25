@@ -13,10 +13,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ DB Connection
+// Connect MongoDB
 connectDB(process.env.MONGODB_URI);
 
-// ✅ Create HTTP server and socket.io instance
+// Create HTTP Server and Attach Socket.io
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -25,27 +25,27 @@ const io = new Server(server, {
   },
 });
 
-// ✅ Inject io in each request
+// Middleware to inject io in req
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// ✅ Routes
+// Routes
 app.use("/ReachNex", authRoute);
 app.use("/ReachNex", postRoute);
 app.use("/ReachNex", profileRoute);
 
-// ✅ Socket connection
+// Socket Setup
 io.on("connection", (socket) => {
-  console.log("✅ User connected");
+  console.log("🔌 User connected to socket.io");
 
   socket.on("disconnect", () => {
-    console.log("❌ User disconnected");
+    console.log("User disconnected from socket.io");
   });
 });
 
-// ✅ Server start
+// Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

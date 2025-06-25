@@ -1,46 +1,45 @@
+
 const { Post } = require("../../Database_Modal/postModal");
 
-// 👍 Like / Unlike a post (with socket emit)
 const likePost = async (req, res) => {
   const { postId, userId } = req.body;
+  console.log("Like Request:", req.body);
+
+  if (!postId || !userId)
+    return res.status(400).json({ message: "Missing data" });
 
   try {
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // ✅ Remove any nulls first
-    post.likes = post.likes.filter(Boolean);
+    const alreadyLiked = post.likes.includes(userId);
 
-    const alreadyLiked = post.likes.some(
-      (id) => id.toString() === userId.toString()
-    );
-
-    if (!alreadyLiked) {
-      post.likes.push(userId);
-    } else {
+    if (alreadyLiked) {
       post.likes = post.likes.filter(
         (id) => id.toString() !== userId.toString()
       );
+    } else {
+      post.likes.push(userId);
     }
 
     await post.save();
 
-    // ✅ Emit like update to all clients
-    req.io.emit("likeUpdated", {
-      postId: post._id,
-      likes: post.likes,
-    });
+    console.log(" Like Updated:", post.likes);
+    req.io.emit("likeUpdated", { postId: post._id, likes: post.likes });
 
-    res.status(200).json({ message: "Like updated", likes: post.likes });
+    res.status(200).json({ likes: post.likes });
   } catch (err) {
-    console.error("Like Error:", err);
-    res.status(500).json({ message: "Server error in liking post" });
+    console.error(" Like Server Error:", err);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-// 💬 Add Comment (with socket emit)
 const commentPost = async (req, res) => {
   const { postId, userId, text } = req.body;
+  console.log("Comment Request:", req.body);
+
+  if (!postId || !userId || !text)
+    return res.status(400).json({ message: "Missing data" });
 
   try {
     const post = await Post.findById(postId);
@@ -55,16 +54,13 @@ const commentPost = async (req, res) => {
     post.comments.push(newComment);
     await post.save();
 
-    // ✅ Emit comment to all clients
-    req.io.emit("commentAdded", {
-      postId: post._id,
-      comment: newComment,
-    });
+    console.log("Comment Added:", newComment);
+    req.io.emit("commentAdded", { postId: post._id, comment: newComment });
 
-    res.status(200).json({ message: "Comment added", comments: post.comments });
+    res.status(200).json({ comments: post.comments });
   } catch (err) {
-    console.error("Comment Error:", err);
-    res.status(500).json({ message: "Server error in commenting" });
+    console.error("Comment Server Error:", err);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 

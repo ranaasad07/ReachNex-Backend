@@ -9,10 +9,10 @@ const postSchema = new mongoose.Schema({
   mediaUrl: String,
   caption: String,
 
-  // 👍 Likes
+  // Likes
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
-  // 💬 Comments
+  // Comments
   comments: [
     {
       userId: {
