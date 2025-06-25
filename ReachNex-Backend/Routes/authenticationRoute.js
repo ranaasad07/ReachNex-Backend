@@ -6,7 +6,10 @@ const {emailVerification} = require("../Control_Room/authentication/emailVerific
 const {userVerification} = require("../Control_Room/authentication/forgetPasswordController")
 const {updatePassword} = require("../Control_Room/authentication/updatePasswordController")
 
+const {logedInUserId} = require("../Control_Room/authentication/homereloadverficationController")
+
 const express = require("express");
+// const { logedInUserId } = require("../Control_Room/authentication/homereloadverficationController")
 const router = express.Router();
 
 
@@ -17,6 +20,7 @@ router.get('/getuser/:id',profileUser)
 router.post('/verifyemail',emailVerification)
 router.post('/forgetpassword',userVerification)
 router.post('/updatepassword',updatePassword)
+router.post('/verifyloginuser',logedInUserId)
 
  
 // router.get('/getusernames/:mail',getUsernames)
