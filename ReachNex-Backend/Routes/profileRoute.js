@@ -1,13 +1,18 @@
-const { changeProfilePic } = require("../Control_Room/profile/changeProfilePic")
-const { getUsernames } = require("../Control_Room/profile/getProfileData")
-const { userEditing } = require("../Control_Room/profile/editProfiledetails")
-
 const express = require("express");
+const updateBanner = require("../Control_Room/profile/Banner");
+const updateAvatar = require("../Control_Room/profile/changeProfilePic");
+const updateDetails = require("../Control_Room/profile/editProfiledetails");
+const getProfile = require("../Control_Room/profile/getProfileData");
+const  requireAuth  = require("../Control_Room/auth");
+
 const router = express.Router();
 
-router.get('/getusernames/:mail', getUsernames)
-router.post('/updateProfilePic', changeProfilePic)
-router.post('/userediting', userEditing);
+// router.use(requireAuth);
+
+router.get("/", getProfile);                  
+router.put("/banner",requireAuth,  updateBanner);          
+router.put("/avatar",requireAuth,  updateAvatar);          
+router.put("/details",requireAuth, updateDetails);
 
 module.exports = router;
-
+ 

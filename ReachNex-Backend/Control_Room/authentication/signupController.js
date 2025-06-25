@@ -28,9 +28,9 @@ const SignUp = async (req, res) => {
       Otp,
       isEmailVerified: false
     });
-
     await user.save();
 
+    
     await sendEmail(email, 'Verify your email', `Your OTP is: ${Otp}`);
 
     res.status(201).json({ message: 'User created successfully. Please verify your email.' });

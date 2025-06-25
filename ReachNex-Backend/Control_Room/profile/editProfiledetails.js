@@ -1,34 +1,24 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const sendEmail = require('../../Email_sending_file/sendEmail');
-const { User } = require('../../Database_Modal/modals');
-const { Post } = require('../../Database_Modal/postModal')
 
-const userEditing = async (req, res) => {
-    try {
-        const { email, bio, gender, showSuggestions } = req.body;
+  const {User} = require("../../Database_Modal/modals")
+  
+const updateDetails = async (req, res) => {
+  const userId = req.userId;
+  const { name, profession, location } = req.body;
 
-        const updateBio = await User.findOneAndUpdate(
-            { email }, // filter by email
-            {
-                bio,
-                gender,
-                showSuggestions,
-            },
-            { new: true }
-        );
+  try {
+    const updatedProfile = await User.findOneAndUpdate(
+      { _id: userId },
+      { name, profession, location },
+      { new: true }
+    );
 
-        if (updateBio) {
-            res.status(200).json(updateBio);
-        } else {
-            res.status(404).json({ message: 'User not found or update failed' });
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Error updating bio', error: err.message });
-    }
+    if (!updatedProfile) return res.status(404).json({ error: "Profile not found" });
+
+    res.json(updatedProfile);
+  } catch (err) {
+    console.error("Details update failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
-module.exports = {
-    userEditing
-}
+module.exports = updateDetails;

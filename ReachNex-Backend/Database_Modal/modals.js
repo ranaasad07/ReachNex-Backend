@@ -41,6 +41,9 @@ const userSchema = new Schema({
     type :Boolean,
     default:false
   },
+  profession: String,
+  location: String,
+  bannerImage: String,
   posts: [{
     type: Schema.Types.ObjectId,
     ref: 'Post'
