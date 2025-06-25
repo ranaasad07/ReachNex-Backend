@@ -1,30 +1,30 @@
 
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const sendEmail = require('../../Email_sending_file/sendEmail');
-const { User } = require('../../Database_Modal/modals');
-const { Post } = require("../../Database_Modal/postModal")
+const { User } = require("../../Database_Modal/modals");
 
-const changeProfilePic = async (req, res) => {
-    try {
-        const { email, profilePicture } = req.body;
+const updateAvatar = async (req, res) => {
+  const userId = req.userId;
+  const imageUrl = req.body.image;
 
-        const updatedUser = await User.findOneAndUpdate(
-            { email },
-            { profilePicture: profilePicture },
-            { new: true }
-        );
+  if (!imageUrl) {
+    return res.status(400).json({ error: "Image URL is required" });
+  }
 
-        if (updatedUser) {
-            return res.status(200).json({ message: 'Profile picture changed', user: updatedUser });
-        } else {
-            return res.status(404).json({ message: 'User not found' });
-        }
+  try {
+    const updatedProfile = await User.findOneAndUpdate(
+       { _id: userId },
+      { profilePicture: imageUrl },
+      { new: true }
+    );
 
-    } catch (err) {
-        console.error('Error updating profile picture:', err);
-        return res.status(500).json({ message: 'Could not change profile picture' });
+    if (!updatedProfile) {
+      return res.status(404).json({ error: "Profile not found for user" });
     }
+
+    res.json(updatedProfile);
+  } catch (err) {
+    console.error("Avatar update failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
-module.exports = { changeProfilePic }
+module.exports = updateAvatar;
