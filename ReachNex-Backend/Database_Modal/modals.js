@@ -43,7 +43,12 @@ const userSchema = new Schema({
   },
   profession: String,
   location: String,
-  bannerImage: String,
+  bannerImage: String, 
+       
+   skills: {
+    type: [String],
+    default: [],
+  },
   posts: [{
     type: Schema.Types.ObjectId,
     ref: 'Post'
