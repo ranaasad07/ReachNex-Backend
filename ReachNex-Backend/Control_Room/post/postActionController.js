@@ -1,5 +1,6 @@
 const { Post } = require("../../Database_Modal/postModal");
 
+// ------------------------ LIKE POST ------------------------
 const likePost = async (req, res) => {
   const { postId, userId } = req.body;
   console.log("Like Request:", req.body);
@@ -33,6 +34,7 @@ const likePost = async (req, res) => {
   }
 };
 
+// ------------------------ COMMENT POST ------------------------
 const commentPost = async (req, res) => {
   const { postId, userId, text } = req.body;
   console.log("Comment Request:", req.body);
@@ -53,7 +55,6 @@ const commentPost = async (req, res) => {
     post.comments.push(newComment);
     await post.save();
 
-    // 🔁 Re-fetch post to populate latest comment's user info
     const updatedPost = await Post.findById(postId).populate(
       "comments.userId",
       "username profilePicture"
@@ -63,7 +64,6 @@ const commentPost = async (req, res) => {
 
     console.log("Comment Added:", latestComment);
 
-    // 🔥 Emit to all sockets
     req.io.emit("commentAdded", {
       postId: post._id,
       comment: latestComment,
@@ -76,7 +76,58 @@ const commentPost = async (req, res) => {
   }
 };
 
+// ------------------------ REPLY TO COMMENT ------------------------
+const replyComment = async (req, res) => {
+  const { postId, commentId, userId, text } = req.body;
+  console.log("Reply Request:", req.body);
+
+  if (!postId || !commentId || !userId || !text)
+    return res.status(400).json({ message: "Missing data" });
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    const newReply = {
+      userId,
+      text,
+      createdAt: new Date(),
+    };
+
+    comment.replies = comment.replies || [];
+    comment.replies.push(newReply);
+
+    await post.save();
+
+    const updatedPost = await Post.findById(postId)
+      .populate("comments.userId", "username profilePicture")
+      .populate("comments.replies.userId", "username profilePicture");
+
+    const updatedComment = updatedPost.comments.find(
+      (c) => c._id.toString() === commentId
+    );
+
+    const latestReply = updatedComment.replies[updatedComment.replies.length - 1];
+
+    req.io.emit("replyAdded", {
+      postId,
+      commentId,
+      reply: latestReply,
+    });
+
+    res.status(200).json({ message: "Reply added", reply: latestReply });
+  } catch (err) {
+    console.error("Reply Server Error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ------------------------ EXPORT ------------------------
 module.exports = {
   likePost,
   commentPost,
+  replyComment,
 };

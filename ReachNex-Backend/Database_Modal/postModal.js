@@ -1,32 +1,59 @@
 const mongoose = require("mongoose");
 
-const postSchema = new mongoose.Schema({
+// 🔹 Reply Schema (nested inside comment — no separate file)
+const replySchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
+  },
+  text: {
+    type: String,
     required: true,
   },
-  mediaUrl: String,
-  caption: String,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
-  // Likes
-  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+// 🔹 Comment Schema (used inside postSchema)
+const commentSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  text: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  replies: [replySchema], // ✅ nested replies array
+});
 
-  // Comments
-  comments: [
-    {
-      userId: {
+// 🔹 Post Schema
+const postSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    mediaUrl: String,
+    caption: String,
+    likes: [
+      {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-      text: String,
-      createdAt: {
-        type: Date,
-        default: Date.now,
-      },
-    },
-  ],
-}, { timestamps: true }); // auto adds createdAt & updatedAt
+    ],
+    comments: [commentSchema], // ✅ with nested replySchema
+  },
+  { timestamps: true }
+);
 
+// 🔹 Model Export
 const Post = mongoose.model("Post", postSchema);
 module.exports = { Post };
