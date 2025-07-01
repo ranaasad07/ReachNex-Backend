@@ -44,7 +44,18 @@ const userSchema = new Schema({
   profession: String,
   location: String,
   bannerImage: String, 
-       
+  experience: [
+  {
+    title: String,
+    company: String,
+    location: String,
+    from: Date,
+    to: Date,
+    description: String
+  }
+],
+
+
    skills: {
     type: [String],
     default: [],

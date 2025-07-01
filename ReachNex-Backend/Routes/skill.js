@@ -63,7 +63,7 @@ router.put('/skills/:index', requireAtuh, async (req, res) => {
   const user = await User.findById(req.userId);
   user.skills[index] = skill;
   await user.save();
-  res.json({ success: true });
+  res.json({ success: true, skills: user.skills }); // ✅ yeh bhejo
 });
 
 // Delete skill by index

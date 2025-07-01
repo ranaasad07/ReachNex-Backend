@@ -9,6 +9,7 @@ const postRoute = require("./Routes/postRoute");
 const authRoute = require("./Routes/authenticationRoute");
 const profileRoute = require("./Routes/profileRoute");
 const skillRoute = require("./Routes/skill")
+const AddExperience = require("./Routes/experience")
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -36,6 +37,7 @@ app.use("/ReachNex", authRoute);
 app.use("/ReachNex", postRoute);
 app.use("/ReachNex", profileRoute);
 app.use("/ReachNex", skillRoute)
+app.use("/ReachNex", AddExperience)
 // Socket Setup
 io.on("connection", (socket) => {
   console.log("🔌 User connected to socket.io");
