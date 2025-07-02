@@ -9,8 +9,10 @@ require("dotenv").config();
 const postRoute = require("./Routes/postRoute");
 const authRoute = require("./Routes/authenticationRoute");
 const profileRoute = require("./Routes/profileRoute");
+const skillRoute = require("./Routes/skill")
+const AddExperience = require("./Routes/experience")
+const Jobs = require("./Routes/job")
 const messageRoute = require("./Routes/messageRoute");
-
 const app = express();
 // app.use(cors({ origin: "*", credentials: true }));
 app.use(cors({
@@ -42,8 +44,10 @@ app.use((req, res, next) => {
 app.use("/ReachNex", authRoute);
 app.use("/ReachNex", postRoute);
 app.use("/ReachNex", profileRoute);
+app.use("/ReachNex", skillRoute)
+app.use("/ReachNex", AddExperience)
+app.use("/ReachNex", Jobs)
 app.use("/ReachNex", messageRoute);
-
 // Socket Setup
 io.on("connection", (socket) => {
   console.log("🔌 User connected to socket.io");

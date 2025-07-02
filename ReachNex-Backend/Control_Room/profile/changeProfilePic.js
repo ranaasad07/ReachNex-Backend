@@ -11,7 +11,7 @@ const updateAvatar = async (req, res) => {
 
   try {
     const updatedProfile = await User.findOneAndUpdate(
-       { _id: userId },
+      { _id: userId },
       { profilePicture: imageUrl },
       { new: true }
     );
@@ -20,7 +20,15 @@ const updateAvatar = async (req, res) => {
       return res.status(404).json({ error: "Profile not found for user" });
     }
 
-    res.json(updatedProfile);
+    // Return only the fields needed by the frontend
+    res.json({
+      id: updatedProfile._id,
+      username: updatedProfile.username,
+      email: updatedProfile.email,
+      fullName: updatedProfile.fullName,
+      profilePicture: updatedProfile.profilePicture,
+      // add other fields if needed
+    });
   } catch (err) {
     console.error("Avatar update failed:", err);
     res.status(500).json({ error: "Internal server error" });
