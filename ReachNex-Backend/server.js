@@ -1,3 +1,4 @@
+// === 📁 backend/server.js ===
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
@@ -11,8 +12,13 @@ const profileRoute = require("./Routes/profileRoute");
 const skillRoute = require("./Routes/skill")
 const AddExperience = require("./Routes/experience")
 const Jobs = require("./Routes/job")
+const messageRoute = require("./Routes/messageRoute");
 const app = express();
-app.use(cors());
+// app.use(cors({ origin: "*", credentials: true }));
+app.use(cors({
+  origin: "http://localhost:5173", // frontend ka origin yahan likho
+  credentials: true,
+}));
 app.use(express.json());
 
 // Connect MongoDB
@@ -34,15 +40,26 @@ app.use((req, res, next) => {
 });
 
 // Routes
+
 app.use("/ReachNex", authRoute);
 app.use("/ReachNex", postRoute);
 app.use("/ReachNex", profileRoute);
 app.use("/ReachNex", skillRoute)
 app.use("/ReachNex", AddExperience)
 app.use("/ReachNex", Jobs)
+app.use("/ReachNex", messageRoute);
 // Socket Setup
 io.on("connection", (socket) => {
   console.log("🔌 User connected to socket.io");
+
+  socket.on("join", (userId) => {
+    socket.join(userId);
+    console.log("User joined room:", userId);
+  });
+
+  socket.on("sendMessage", (message) => {
+    io.to(message.receiverId).emit("receiveMessage", message);
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected from socket.io");
