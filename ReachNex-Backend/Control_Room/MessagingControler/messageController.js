@@ -49,6 +49,8 @@ const sendMessage = async (req, res) => {
 
     await newMessage.save();
 
+     req.app.get("io").to(receiverId).emit("receiveMessage", newMessage);
+
     res.status(200).json(newMessage);
   } catch (error) {
     console.log("sendMessage error:", error.message);
