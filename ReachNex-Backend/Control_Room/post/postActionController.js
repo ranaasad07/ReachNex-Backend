@@ -57,7 +57,7 @@ const commentPost = async (req, res) => {
 
     const updatedPost = await Post.findById(postId).populate(
       "comments.userId",
-      "username profilePicture"
+      "fullName profilePicture"
     );
 
     const latestComment = updatedPost.comments[updatedPost.comments.length - 1];
@@ -103,8 +103,8 @@ const replyComment = async (req, res) => {
     await post.save();
 
     const updatedPost = await Post.findById(postId)
-      .populate("comments.userId", "username profilePicture")
-      .populate("comments.replies.userId", "username profilePicture");
+      .populate("comments.userId", "fullName profilePicture")
+      .populate("comments.replies.userId", "fullName profilePicture");
 
     const updatedComment = updatedPost.comments.find(
       (c) => c._id.toString() === commentId

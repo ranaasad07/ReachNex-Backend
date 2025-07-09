@@ -150,37 +150,27 @@ router.put("/experience/:id", requireAuth, async (req, res) => {
   }
 })
 
-// Delete experience by ID
 router.delete("/experience/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params
 
-    // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid experience ID",
-      })
+      return res.status(400).json({ success: false, message: "Invalid experience ID" })
     }
 
     const user = await User.findById(req.userId)
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      })
+      return res.status(404).json({ success: false, message: "User not found" })
     }
 
-    const experience = user.experience.id(id)
-    if (!experience) {
-      return res.status(404).json({
-        success: false,
-        message: "Experience not found",
-      })
+    // Filter out the experience
+    const originalLength = user.experience.length
+    user.experience = user.experience.filter((exp) => exp._id.toString() !== id)
+
+    if (user.experience.length === originalLength) {
+      return res.status(404).json({ success: false, message: "Experience not found" })
     }
 
-    // Remove the experience
-    experience.remove()
     await user.save()
 
     res.json({
@@ -195,5 +185,6 @@ router.delete("/experience/:id", requireAuth, async (req, res) => {
     })
   }
 })
+
 
 module.exports = router
