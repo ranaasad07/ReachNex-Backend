@@ -1,32 +1,16 @@
-const {Messages} = require("../../Database_Modal/MessageModel");
-const {User} = require("../../Database_Modal/modals");
+const { Messages } = require("../../Database_Modal/MessageModel");
+const Conversation = require("../../Database_Modal/Conversation"); // ✅ Fixed
 
-const getUsersForSidebar = async (req, res) => {
-  try {
-  
-    const loggedUserId = req.headers.userid;
-    const users = await User.find({ _id: { $ne: loggedUserId } }).select("-password");
-    // console.log("=-=-=-users=",users)
-    
-    res.status(200).json(users);
-  } catch (error) {
-    console.log("getUsersForSidebar error:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
+const { User } = require("../../Database_Modal/modals");
 
 const getMessages = async (req, res) => {
   try {
-    console.log("=-=-=-hhghgh")
-    const myId = req.headers.userid;
-    // console.log("=-=-=-",myId)
-    const { id: userToChatId } = req.params;
-    const messages = await Messages.find({
-      $or: [
-        { senderId: myId, receiverId: userToChatId },
-        { senderId: userToChatId, receiverId: myId }
-      ]
-    }).populate('receiverId', 'name')
+    const { id: conversationId } = req.params;
+
+    const messages = await Messages.find({ conversation: conversationId })
+      .populate("senderId", "fullName profilePicture username")
+      .populate("receiverId", "fullName profilePicture")
+      .sort({ createdAt: 1 }); 
 
     res.status(200).json(messages);
   } catch (error) {
@@ -37,19 +21,56 @@ const getMessages = async (req, res) => {
 
 const sendMessage = async (req, res) => {
   try {
-    const { text } = req.body;
-    const { id: receiverId } = req.params;
-    const senderId =req.headers.userid;;
+    const text = req.body.text;
+    const senderId = req.headers.senderid;
+    const receiverId= req.headers.receiverid;
+    let conversationId = req.headers.conversationid;
+    // let { id: conversationId } = req.params;
+    console.log("-=-=-",req.headers)
+    let conversation;
 
+    // ✅ If no conversationId provided, find or create
+    if (!conversationId || conversationId === "null") {
+      conversation = await Conversation.findOne({
+        members: { $all: [senderId, receiverId] },
+        // isGroupChat: false
+      });
+
+      if (!conversation) {
+        conversation = new Conversation({
+          members: [senderId, receiverId],
+        });
+        await conversation.save();
+      }
+
+      conversationId = conversation._id;
+    } else {
+      conversation = await Conversation.findById(conversationId);
+    }
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    // ✅ Save the message
     const newMessage = new Messages({
       senderId,
       receiverId,
       text,
+      conversation: conversationId,
     });
 
     await newMessage.save();
 
-     req.app.get("io").to(receiverId).emit("receiveMessage", newMessage);
+    // ✅ Update conversation lastMessage
+    await Conversation.findByIdAndUpdate(conversationId, {
+      $set: {
+        lastMessage: text,
+      },
+    });
+
+    // ✅ Emit through socket
+    req.app.get("io").to(conversationId).emit("receiveMessage", newMessage);
 
     res.status(200).json(newMessage);
   } catch (error) {
@@ -58,8 +79,144 @@ const sendMessage = async (req, res) => {
   }
 };
 
+// ✅ Send Message in a Conversation
+const sendMessage_bkp = async (req, res) => {
+  try {
+    const { text } = req.body;
+    const { id: conversationId } = req.params;
+    const senderId = req.headers.userid;
+    console.log("=--==-=srnserId",senderId,"conversationId",conversationId)
+    // ✅ Conversation find karo to get receiverId
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+console.log(conversation)
+    const receiverId = conversation.members.find((memberId) => {
+      // console.log("💬 Member ID:", memberId,"memberIdmemberId",memberId.toString());
+      // console.log("🧑‍💻 Sender ID:", senderId);
+      return memberId?.toString() !== senderId;
+    });
+
+    console.log("✅ Final Receiver ID:", receiverId);
+
+
+    // ✅ Yeh senderId aur receiverId ab dono required hain
+    const newMessage = new Messages({
+      senderId,
+      receiverId,
+      text,
+    });
+
+    await newMessage.save();
+
+    await Conversation.findByIdAndUpdate(conversationId, {
+      $set: {
+        lastMessage: text,
+      },
+    });
+
+    // 👇 emit socket message
+    req.app.get("io").to(conversationId).emit("receiveMessage", newMessage);
+
+    res.status(200).json(newMessage);
+  } catch (error) {
+    console.log("sendMessage error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+// ✅ Get All Conversations for Logged-in User
+const getUserConversations = async (req, res) => {
+  // try {
+  //   const senderId = req.headers.senderid;
+  //   const receiverId = req.headers.receiverid;
+  //   // console.log(req.headers," req===========")
+
+  //   // const conversations = await Conversation.find({ members: userId })
+  //   //   .populate("members", "fullName profilePicture username isOnline")
+  //   //   .sort({ updatedAt: -1 });
+
+  //     const conversations = await Conversation.findOne({
+  //       members: { $all: [senderId, receiverId] }, // ✅ dono hone chahiye members me
+  //       // isGroupChat: false // Optional: agar sirf one-to-one chahiye
+  //     });
+
+  //     console.log(conversations,"=========Conversation")
+
+  //   res.status(200).json(conversations);
+  // } catch (error) {
+  //   console.log("getUserConversations error:", error.message);
+  //   res.status(500).json({ message: "Internal Server Error" });
+  // }
+
+  try {
+    const senderId = req.headers.senderid;
+    const receiverId = req.headers.receiverid;
+
+    const messages = await Messages.find({
+      $or: [
+        { senderId, receiverId },
+        { senderId: receiverId, receiverId: senderId }
+      ]
+    }).sort({ createdAt: 1 }); // oldest to newest
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.log("getMessagesBetweenTwoUsers error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// ✅ Create or Get Conversation Between Two Users
+const createOrGetConversation = async (req, res) => {
+  try {
+    const senderId = req.headers.userid;
+    const { receiverId } = req.body;
+
+    // Check if conversation already exists
+    let conversation = await Conversation.findOne({
+      isGroupChat: false,
+      members: { $all: [senderId, receiverId], $size: 2 }
+    });
+
+    if (!conversation) {
+      // Create new conversation
+      conversation = new Conversation({
+        members: [senderId, receiverId],
+        isGroupChat: false,
+      });
+
+      await conversation.save();
+    }
+
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.log("createOrGetConversation error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+const getOnlineUsers = async (req, res) => {
+  try {
+    // const onlineUserIds = Array.from(req.onlineUsers.keys());
+
+    const users = await User.find({}).select(
+      "fullName profilePicture username isOnline"
+    ).lean().exec();
+    console.log("0--=-=-=-=",users)
+    res.status(200).json({users});
+  } catch (err) {
+    console.log("getOnlineUsers error:", err.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
-  getUsersForSidebar,
   getMessages,
   sendMessage,
+  getUserConversations,
+  createOrGetConversation,
+  getOnlineUsers,
 };

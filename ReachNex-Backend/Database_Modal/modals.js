@@ -71,7 +71,11 @@ const userSchema = new Schema({
   following: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
-  }]
+  }],
+  isOnline: {
+  type: Boolean,
+  default: false
+}
 
 }, { timestamps: true });
 
