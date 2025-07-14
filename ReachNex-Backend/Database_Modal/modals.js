@@ -64,6 +64,14 @@ const userSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Post'
   }],
+  connections:[{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  pendingrequsests:[{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   followers: [{
     type: Schema.Types.ObjectId,
     ref: 'User'

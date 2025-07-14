@@ -122,6 +122,7 @@ const skillRoute = require("./Routes/skill");
 const AddExperience = require("./Routes/experience");
 const Jobs = require("./Routes/job");
 const messageRoute = require("./Routes/messageRoute");
+const connectionRoute = require("./Routes/connectionRoute")
 
 const app = express();
 
@@ -170,6 +171,7 @@ app.use("/ReachNex", skillRoute);
 app.use("/ReachNex", AddExperience);
 app.use("/ReachNex", Jobs);
 app.use("/ReachNex", messageRoute);
+app.use("/ReachNex", connectionRoute);
 
 // ✅ SOCKET.IO EVENTS
 io.on("connection", (socket) => {
