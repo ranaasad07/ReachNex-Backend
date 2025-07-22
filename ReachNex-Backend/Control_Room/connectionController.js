@@ -1,19 +1,27 @@
 const { User } = require("../Database_Modal/modals");
+const { ConnectionRequest } = require("../Database_Modal/connectionRequestSchema ");
+
+
 
 const getSuggestions = async (req, res) => {
   const userId = req.userId;
 
   try {
-    // Get current user
     const currentUser = await User.findById(userId);
-    if (!currentUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
 
-    // All users except current and except ones already followed
+    const sentRequests = await ConnectionRequest.find({ sender: userId }).select("receiver");
+    const receivedRequests = await ConnectionRequest.find({ receiver: userId }).select("sender");
+
+    const sentIds = sentRequests.map(r => r.receiver.toString());
+    const receivedIds = receivedRequests.map(r => r.sender.toString());
+    const followingIds = currentUser.following.map(id => id.toString());
+
+    const excludeIds = new Set([userId, ...sentIds, ...receivedIds, ...followingIds]);
+
     const suggestions = await User.find({
-      _id: { $ne: userId, $nin: currentUser.following },
-    }).select("-password -Otp"); // Exclude sensitive data
+      _id: { $nin: Array.from(excludeIds) },
+    }).select("fullName email profilePicture"); 
 
     res.status(200).json(suggestions);
   } catch (err) {
@@ -21,4 +29,137 @@ const getSuggestions = async (req, res) => {
   }
 };
 
-module.exports = { getSuggestions };
+
+
+const getConnectionCount = async (req, res) => {
+  const userId = req.userId;
+  try {
+    const user = await User.findById(userId).select("following");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" }); // ✅ safe fallback
+    }
+
+    res.status(200).json({ count: user.following.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
+
+
+
+// send Request 
+
+const sendConnectionRequest = async (req, res) => {
+  const { receiverId } = req.body;
+  const senderId = req.userId;
+
+  try {
+    const exists = await ConnectionRequest.findOne({ sender: senderId, receiver: receiverId });
+    if (exists) {
+      return res.status(400).json({ error: "Request already sent" });
+    }
+
+    const newRequest = new ConnectionRequest({ sender: senderId, receiver: receiverId });
+    await newRequest.save();
+
+    // ✅ Emit socket event globally (no online user check)
+    const io = req.io;
+    io.emit("new_request", { receiverId });
+
+    res.status(201).json({ success: true, message: "Request sent" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}; 
+
+
+
+
+
+// getIncomingRequest 
+
+
+const getIncomingRequests = async (req, res) => {
+  const userId = req.userId;
+
+  try {
+    const requests = await ConnectionRequest.find({ receiver: userId })
+      .populate("sender", "fullName email profilePicture");
+
+    res.status(200).json(requests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+// acceptRequest
+
+const acceptRequest = async (req, res) => {
+  const { requestId } = req.body;
+  const receiverId = req.userId;
+
+  try {
+    // ✅ Get the request
+    const request = await ConnectionRequest.findById(requestId);
+    if (!request || request.receiver.toString() !== receiverId) {
+      return res.status(404).json({ error: "Connection request not found" });
+    }
+
+    const senderId = request.sender.toString();
+
+    // ✅ Add each other in 'following'
+    await User.findByIdAndUpdate(receiverId, { $addToSet: { following: senderId } });
+    await User.findByIdAndUpdate(senderId, { $addToSet: { following: receiverId } });
+
+    // ✅ Delete request
+    await ConnectionRequest.findByIdAndDelete(requestId);
+
+    // ✅ Emit event to sender’s room
+    req.io.to(senderId).emit("connectionAccepted", { receiverId: senderId });
+
+    res.status(200).json({ message: "Connection accepted" });
+  } catch (err) {
+    console.error("❌ Error in acceptRequest:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+
+//rejectRequest
+
+const rejectRequest = async (req, res) => {
+  const receiverId = req.userId;
+  const { senderId } = req.body;
+
+  try {
+    await ConnectionRequest.findOneAndDelete({ sender: senderId, receiver: receiverId });
+    res.status(200).json({ message: "Request rejected" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+// getPendingRequests
+const getPendingRequests = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const requests = await ConnectionRequest.find({ receiver: userId })
+      .populate("sender", "fullName email profilePicture")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(requests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+module.exports = { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest ,getConnectionCount, getPendingRequests };

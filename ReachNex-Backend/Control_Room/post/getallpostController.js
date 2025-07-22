@@ -5,7 +5,7 @@ const fetchAllPosts = async (req, res) => {
   try {
     let posts = await Post.find({})
       .sort({ createdAt: -1 })
-      .populate('userId', 'fullName profilePicture') // post user
+      .populate('userId', 'fullName profilePicture username') // post user
       .populate('comments.userId', 'fullName profilePicture'); // comment user
 
     // ✅ Manually populate reply.userId for each reply
@@ -42,5 +42,6 @@ const fetchAllPosts = async (req, res) => {
     res.status(500).json({ message: 'Error fetching posts' });
   }
 };
+
 
 module.exports = { fetchAllPosts };

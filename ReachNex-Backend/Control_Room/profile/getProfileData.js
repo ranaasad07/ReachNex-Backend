@@ -1,19 +1,20 @@
+// const { User } = require("../../Database_Modal/modals"); // User model import
 
-// const Profile = require('../../Database_Modal/profile')
+// const getProfileByUsername = async (req, res) => {
+//   const { username } = req.params;
 
+//   try {
+//     const user = await User.findOne({ username }).select(
+//       "fullName username email profilePicture bannerImage connections location profession"
+//     );
 
+//     if (!user) return res.status(404).json({ message: "User not found" });
 
-const getProfile = async (req, res) => {
-  try {
-    const user = await Profile.findById(req.user._id).select(
-      "name profession location profileImage bannerImage connections"
-    );
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching profile", error: err.message });
-  }
-};
+//     res.status(200).json(user);
+//   } catch (err) {
+//     console.error("Error fetching profile:", err.message);
+//     res.status(500).json({ message: "Error fetching profile", error: err.message });
+//   }
+// };
 
-
-module.exports = getProfile; 
+// module.exports = { getProfileByUsername };
