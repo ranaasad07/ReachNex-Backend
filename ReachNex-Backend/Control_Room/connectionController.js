@@ -161,5 +161,22 @@ const getPendingRequests = async (req, res) => {
   }
 };
 
+// connectionController.js
 
-module.exports = { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest ,getConnectionCount, getPendingRequests };
+const userConnections = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId).populate("following");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ connections: user.following });
+  } catch (err) {
+    console.error("Error fetching connections:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+module.exports = { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest ,getConnectionCount, getPendingRequests, userConnections };
