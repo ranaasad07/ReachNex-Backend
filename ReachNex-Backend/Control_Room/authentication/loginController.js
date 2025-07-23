@@ -19,7 +19,7 @@ const Login = async (req, res) => {
       username: user.username,
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.json({ token });
   } catch (err) {
