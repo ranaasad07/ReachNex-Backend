@@ -15,6 +15,8 @@ const Jobs = require("./Routes/job");
 const messageRoute = require("./Routes/messageRoute");
 const JobApplications = require("./Routes/jobApplicationRoute")
 const networkRoutes = require("./Routes/network")
+const notificationRoute = require("./Routes/notificationRoute");
+
 const app = express();
 
 // ✅ CORS setup
@@ -64,6 +66,9 @@ app.use("/ReachNex", Jobs);
 app.use("/ReachNex", messageRoute);
 app.use("/ReachNex", JobApplications);
 app.use("/ReachNex", networkRoutes);
+
+app.use("/ReachNex/notifications", notificationRoute);
+
 
 
 // ✅ SOCKET.IO EVENTS

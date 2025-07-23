@@ -3,6 +3,8 @@ const router = express.Router();
 
 const { uploadingPost } = require("../Control_Room/post/uploadpostController");
 const { fetchAllPosts } = require("../Control_Room/post/getallpostController");
+const { getPostById } = require("../Control_Room/post/getpostbyidController");
+
 const {
   likePost,
   commentPost,
@@ -24,5 +26,8 @@ router.post("/commentPost", commentPost);
 // 🧵 Reply to a Comment
 router.post("/replyComment", replyComment); // ✅ Final route
 
+
+
+router.get("/posts/:postId", getPostById);
 // ✅ Correct export
 module.exports = router;
