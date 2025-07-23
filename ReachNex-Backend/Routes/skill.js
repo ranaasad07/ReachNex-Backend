@@ -9,6 +9,19 @@ router.get('/skills', requireAtuh, async (req, res) => {
   res.json({ skills: user.skills });
 });
 
+// GET /ReachNex/skills/:userId
+router.get("/skills/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    res.status(200).json({ success: true, skills: user.skills || [] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 // Add skill
 router.post('/skills', requireAtuh, async (req, res) => {
   try {

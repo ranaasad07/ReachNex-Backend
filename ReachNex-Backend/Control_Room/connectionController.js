@@ -162,7 +162,7 @@ const getPendingRequests = async (req, res) => {
 };
 
 // connectionController.js
-
+  
 const userConnections = async (req, res) => {
   const { userId } = req.params;
 
@@ -177,6 +177,23 @@ const userConnections = async (req, res) => {
   }
 };
 
+const showConnection = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Count of following users
+    const followingCount = user.following?.length || 0;
+
+    res.status(200).json({ count: followingCount });
+  } catch (err) {
+    console.error("Connection count error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
 
 
-module.exports = { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest ,getConnectionCount, getPendingRequests, userConnections };
+
+module.exports = { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest ,getConnectionCount, getPendingRequests, userConnections, showConnection };
