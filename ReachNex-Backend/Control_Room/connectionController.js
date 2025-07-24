@@ -77,12 +77,56 @@ const getConnectionCount = async (req, res) => {
 //   }
 // }; 
 
+// const sendConnectionRequest = async (req, res) => {
+//   const { receiverId } = req.body;
+//   const senderId = req.userId;
+
+//   try {
+//     // Check if request already exists
+//     const exists = await ConnectionRequest.findOne({
+//       sender: senderId,
+//       receiver: receiverId,
+//     });
+
+//     if (exists) {
+//       return res.status(400).json({ error: "Request already sent" });
+//     }
+
+//     // Save the new connection request
+//     const newRequest = new ConnectionRequest({ sender: senderId, receiver: receiverId });
+//     await newRequest.save();
+
+//     // Optional: Emit socket event to frontend (general broadcast or to specific room)
+//     const io = req.io;
+//     io.emit("new_request", { receiverId });
+
+//     // ✅ Save notification to DB and emit if receiver is online
+//     await sendNotification({
+//       recipientId: receiverId,
+//       senderId: senderId,
+//       type: "connection-request",
+//       message: "sent you a connection request",
+//       link: `/profile/${senderId}`,
+//       io,
+//       onlineUsers: req.onlineUsers,
+//     });
+
+//     res.status(201).json({ success: true, message: "Connection request sent" });
+//   } catch (err) {
+//     console.error("❌ Error sending connection request:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+const { User } = require("../Database_Modal/modals");
+const { ConnectionRequest } = require("../Database_Modal/connectionRequestSchema");
+const sendNotification = require("../utils/sendNotification");
+
+// 🚀 Send Connection Request
 const sendConnectionRequest = async (req, res) => {
   const { receiverId } = req.body;
   const senderId = req.userId;
 
   try {
-    // Check if request already exists
     const exists = await ConnectionRequest.findOne({
       sender: senderId,
       receiver: receiverId,
@@ -92,24 +136,28 @@ const sendConnectionRequest = async (req, res) => {
       return res.status(400).json({ error: "Request already sent" });
     }
 
-    // Save the new connection request
-    const newRequest = new ConnectionRequest({ sender: senderId, receiver: receiverId });
+    const newRequest = new ConnectionRequest({
+      sender: senderId,
+      receiver: receiverId,
+    });
+
     await newRequest.save();
 
-    // Optional: Emit socket event to frontend (general broadcast or to specific room)
     const io = req.io;
-    io.emit("new_request", { receiverId });
+    const onlineUsers = req.onlineUsers;
 
-    // ✅ Save notification to DB and emit if receiver is online
+    // ✅ Save and emit notification
     await sendNotification({
       recipientId: receiverId,
-      senderId: senderId,
+      senderId,
       type: "connection-request",
       message: "sent you a connection request",
       link: `/profile/${senderId}`,
       io,
-      onlineUsers: req.onlineUsers,
+      onlineUsers,
     });
+
+    io.emit("new_request", { receiverId }); // Optional global emit
 
     res.status(201).json({ success: true, message: "Connection request sent" });
   } catch (err) {
