@@ -10,7 +10,7 @@ const getMessages = async (req, res) => {
     const messages = await Messages.find({ conversation: conversationId })
       .populate("senderId", "fullName profilePicture username")
       .populate("receiverId", "fullName profilePicture")
-      .sort({ createdAt: 1 }); 
+      .sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -23,10 +23,10 @@ const sendMessage = async (req, res) => {
   try {
     const text = req.body.text;
     const senderId = req.headers.senderid;
-    const receiverId= req.headers.receiverid;
+    const receiverId = req.headers.receiverid;
     let conversationId = req.headers.conversationid;
     // let { id: conversationId } = req.params;
-    console.log("-=-=-",req.headers)
+    console.log("-=-=-", req.headers)
     let conversation;
 
     // ✅ If no conversationId provided, find or create
@@ -62,12 +62,24 @@ const sendMessage = async (req, res) => {
 
     await newMessage.save();
 
+    // Fetch new unread count for that user
+const unreadCount = await Messages.countDocuments({
+  receiverId,
+  isRead: false,
+});
+
+// Emit real-time unread count
+req.app.get("io").to(receiverId.toString()).emit("unreadMessageCount", unreadCount);
+
+
     // ✅ Update conversation lastMessage
     await Conversation.findByIdAndUpdate(conversationId, {
       $set: {
         lastMessage: text,
       },
     });
+
+    
 
     // ✅ Emit through socket
     req.app.get("io").to(conversationId).emit("receiveMessage", newMessage);
@@ -85,14 +97,14 @@ const sendMessage_bkp = async (req, res) => {
     const { text } = req.body;
     const { id: conversationId } = req.params;
     const senderId = req.headers.userid;
-    console.log("=--==-=srnserId",senderId,"conversationId",conversationId)
+    console.log("=--==-=srnserId", senderId, "conversationId", conversationId)
     // ✅ Conversation find karo to get receiverId
     const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
       return res.status(404).json({ message: "Conversation not found" });
     }
-console.log(conversation)
+    console.log(conversation)
     const receiverId = conversation.members.find((memberId) => {
       // console.log("💬 Member ID:", memberId,"memberIdmemberId",memberId.toString());
       // console.log("🧑‍💻 Sender ID:", senderId);
@@ -205,13 +217,82 @@ const getOnlineUsers = async (req, res) => {
     const users = await User.find({}).select(
       "fullName profilePicture username isOnline"
     ).lean().exec();
-    console.log("0--=-=-=-=",users)
-    res.status(200).json({users});
+    console.log("0--=-=-=-=", users)
+    res.status(200).json({ users });
   } catch (err) {
     console.log("getOnlineUsers error:", err.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+const getUnreadMessageCount = async (req, res) => {
+  try {
+    const userId = req.headers.userid; // or `req.user.id` if using auth middleware
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID missing in headers" });
+    }
+
+    const count = await Messages.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    });
+
+    res.status(200).json({ unreadCount: count });
+  } catch (error) {
+    console.log("getUnreadMessageCount error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// ✅ Mark individual message as read
+const markMessageAsRead = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+
+    const updated = await Messages.findByIdAndUpdate(
+      messageId,
+      { isRead: true },
+      { new: true }
+    );
+
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("markMessageAsRead error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+const getUnreadCountPerConversation = async (req, res) => {
+  try {
+    const userId = req.headers.userid;
+
+    const unreadCounts = await Messages.aggregate([
+      {
+        $match: {
+          receiverId: userId,
+          isRead: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$conversation",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Result: [ { _id: "conversationId", count: 2 }, ... ]
+    res.status(200).json(unreadCounts);
+  } catch (err) {
+    console.error("getUnreadCountPerConversation error:", err.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 
 module.exports = {
   getMessages,
@@ -219,4 +300,5 @@ module.exports = {
   getUserConversations,
   createOrGetConversation,
   getOnlineUsers,
+  getUnreadMessageCount, markMessageAsRead, getUnreadCountPerConversation
 };
