@@ -54,10 +54,25 @@ const clearAllNotifications = async (req, res) => {
   }
 };
 
+// ✅ Get count of unread notifications
+const getUnseenCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      recipientId: req.params.userId,
+      isRead: false
+    });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
 module.exports = {
   getNotifications,
   markAsRead,
   markAllAsRead,
   deleteNotification,
   clearAllNotifications,
+  getUnseenCount,
 };
