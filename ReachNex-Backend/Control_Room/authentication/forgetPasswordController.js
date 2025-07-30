@@ -34,6 +34,7 @@ const userVerification = async (req, res) => {
     }
 }
 
+
 module.exports = {
     userVerification
 }
