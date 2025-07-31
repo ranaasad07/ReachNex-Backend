@@ -61,7 +61,8 @@ const {
   markAsRead,
   markAllAsRead,
   deleteNotification,
-  clearAllNotifications
+  clearAllNotifications,
+  getUnseenCount 
 } = require("../Control_Room/notificationController");
 
 // Retrieve all notifications for a user
@@ -78,5 +79,8 @@ router.delete("/:id", deleteNotification);
 
 // Delete/clear all notifications for a user
 router.delete("/clear/:userId", clearAllNotifications);
+
+router.get("/unseen-count/:userId", getUnseenCount);
+
 
 module.exports = router;
