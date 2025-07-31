@@ -22,7 +22,7 @@ const userVerification = async (req, res) => {
 
             // await user.save();
             existingUser.save()
-
+            console.log(Otp)
             await sendEmail(email, 'Verify your email', `Your OTP is: ${Otp}`);
         }
 
