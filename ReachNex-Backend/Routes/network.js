@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../Control_Room/auth");
 const {User} = require("../Database_Modal/modals")
-const { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest, getConnectionCount, getPendingRequests, userConnections, showConnection } = require("../Control_Room/connectionController");
+const { getSuggestions, sendConnectionRequest, getIncomingRequests, acceptRequest, rejectRequest, getConnectionCount, getPendingRequests, userConnections, showConnection ,getPendingRequestCount} = require("../Control_Room/connectionController");
 
 router.get("/suggestions", auth, getSuggestions);
 router.post("/send", auth, sendConnectionRequest);
@@ -13,7 +13,7 @@ router.get("/user/connections", auth, getConnectionCount);
 router.get("/pending", auth, getPendingRequests);
 router.get("/connections/:userId", auth , userConnections)  
 router.get("/user/connections/:userId",auth ,  showConnection)  
-
+router.get("/connection-requests/count", auth, getPendingRequestCount);
 
 
 
