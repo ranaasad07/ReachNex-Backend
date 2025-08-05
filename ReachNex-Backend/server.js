@@ -110,6 +110,38 @@ io.on("connection", (socket) => {
     }
     console.log("❌ Disconnected:", [...onlineUsers.keys()]);
   });
+
+   socket.on("markConversationAsRead", async ({ conversationId, userId }) => {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(conversationId) || !mongoose.Types.ObjectId.isValid(userId)) {
+        console.log("❌ Invalid ObjectId(s)");
+        return;
+      }
+
+      const result = await Messages.updateMany(
+        {
+          conversation: conversationId,
+          receiverId: userId,
+          isRead: false,
+        },
+        { $set: { isRead: true } }
+      );
+
+      const unreadCount = await Messages.countDocuments({
+        receiverId: userId,
+        isRead: false,
+      });
+
+      // 🔄 Emit updated unread count to navbar
+      io.to(userId).emit("unreadMessageCount", unreadCount);
+      console.log(`📩 Marked messages read in conversation: ${conversationId}, new count: ${unreadCount}`);
+    } catch (err) {
+      console.error("🔥 markConversationAsRead error:", err.message);
+    }
+  });
+
+  
+
 });
 
 // ✅ Start Server

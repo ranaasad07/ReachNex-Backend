@@ -367,17 +367,73 @@ const getUnreadCountPerConversation = async (req, res) => {
 //     res.status(500).json({ message: "Internal Server Error" });
 //   }
 // };
+// const markConversationMessagesAsRead = async (req, res) => {
+//   try {
+//     const { conversationId } = req.params; // e.g., 'userA_userB'
+//     const userId = req.headers.userid;
+    
+
+//     if (!userId || !conversationId) {
+//       return res.status(400).json({ message: "Missing userId or conversationId" });
+//     }
+
+//     // Split the room ID
+//     const [userA, userB] = conversationId.split("_");
+
+//     // Validate ObjectId format
+//     if (
+//       !mongoose.Types.ObjectId.isValid(userA) ||
+//       !mongoose.Types.ObjectId.isValid(userB) ||
+//       !mongoose.Types.ObjectId.isValid(userId)
+//     ) {
+//       return res.status(400).json({ message: "Invalid ObjectId(s)" });
+//     }
+
+//     // Find the actual conversation
+//     const conversation = await Conversation.findOne({
+//       members: {
+//         $all: [
+//           new mongoose.Types.ObjectId(userA),
+//           new mongoose.Types.ObjectId(userB),
+//         ],
+//       },
+//       isGroupChat: false,
+//     });
+
+//     if (!conversation) {
+//       return res.status(404).json({ message: "Conversation not found" });
+//     }
+
+//     // Update unread messages for this user in this conversation
+//     const result = await Messages.updateMany(
+//       {
+//         conversation: conversation._id,
+//         receiverId: new mongoose.Types.ObjectId(userId),
+//         isRead: false,
+//       },
+//       { $set: { isRead: true } }
+
+//     );
+    
+//   // 🔄 Recalculate unread message count for the user
+   
+
+//     res.status(200).json({ modifiedCount: result.modifiedCount });
+//   } catch (error) {
+//     console.error("🔥 Error marking messages as read:", error);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
 const markConversationMessagesAsRead = async (req, res) => {
   try {
     const { conversationId } = req.params; // e.g., 'userA_userB'
     const userId = req.headers.userid;
-    
 
     if (!userId || !conversationId) {
       return res.status(400).json({ message: "Missing userId or conversationId" });
     }
 
-    // Split the room ID
+    // Split the conversationId (room ID)
     const [userA, userB] = conversationId.split("_");
 
     // Validate ObjectId format
@@ -389,7 +445,7 @@ const markConversationMessagesAsRead = async (req, res) => {
       return res.status(400).json({ message: "Invalid ObjectId(s)" });
     }
 
-    // Find the actual conversation
+    // Find the actual conversation document
     const conversation = await Conversation.findOne({
       members: {
         $all: [
@@ -412,11 +468,17 @@ const markConversationMessagesAsRead = async (req, res) => {
         isRead: false,
       },
       { $set: { isRead: true } }
-
     );
-    
-  // 🔄 Recalculate unread message count for the user
-   
+
+    // Recalculate unread message count for the user after marking read
+    const unreadCount = await Messages.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    });
+
+    // Emit the updated unread count via socket to the user
+    req.app.get("io").to(userId).emit("unreadMessageCount", unreadCount);
+    console.log(`📢 Sent updated unreadMessageCount (${unreadCount}) to user ${userId}`);
 
     res.status(200).json({ modifiedCount: result.modifiedCount });
   } catch (error) {
@@ -424,6 +486,7 @@ const markConversationMessagesAsRead = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 // const markConversationMessagesAsRead = async (req, res) => {
 //   try {
 //     const { conversationId } = req.params;
