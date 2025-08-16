@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { Messages } = require("../../Database_Modal/MessageModel");
 const Conversation = require("../../Database_Modal/Conversation"); // ✅ Fixed
 
@@ -10,7 +11,7 @@ const getMessages = async (req, res) => {
     const messages = await Messages.find({ conversation: conversationId })
       .populate("senderId", "fullName profilePicture username")
       .populate("receiverId", "fullName profilePicture")
-      .sort({ createdAt: 1 }); 
+      .sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -23,10 +24,10 @@ const sendMessage = async (req, res) => {
   try {
     const text = req.body.text;
     const senderId = req.headers.senderid;
-    const receiverId= req.headers.receiverid;
+    const receiverId = req.headers.receiverid;
     let conversationId = req.headers.conversationid;
     // let { id: conversationId } = req.params;
-    console.log("-=-=-",req.headers)
+    console.log("-=-=-", req.headers)
     let conversation;
 
     // ✅ If no conversationId provided, find or create
@@ -62,12 +63,24 @@ const sendMessage = async (req, res) => {
 
     await newMessage.save();
 
+    // Fetch new unread count for that user
+    const unreadCount = await Messages.countDocuments({
+      receiverId,
+      isRead: false,
+    });
+
+    // Emit real-time unread count
+    req.app.get("io").to(receiverId.toString()).emit("unreadMessageCount", unreadCount);
+
+
     // ✅ Update conversation lastMessage
     await Conversation.findByIdAndUpdate(conversationId, {
       $set: {
         lastMessage: text,
       },
     });
+
+
 
     // ✅ Emit through socket
     req.app.get("io").to(conversationId).emit("receiveMessage", newMessage);
@@ -85,14 +98,14 @@ const sendMessage_bkp = async (req, res) => {
     const { text } = req.body;
     const { id: conversationId } = req.params;
     const senderId = req.headers.userid;
-    console.log("=--==-=srnserId",senderId,"conversationId",conversationId)
+    console.log("=--==-=srnserId", senderId, "conversationId", conversationId)
     // ✅ Conversation find karo to get receiverId
     const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
       return res.status(404).json({ message: "Conversation not found" });
     }
-console.log(conversation)
+    console.log(conversation)
     const receiverId = conversation.members.find((memberId) => {
       // console.log("💬 Member ID:", memberId,"memberIdmemberId",memberId.toString());
       // console.log("🧑‍💻 Sender ID:", senderId);
@@ -130,28 +143,7 @@ console.log(conversation)
 
 // ✅ Get All Conversations for Logged-in User
 const getUserConversations = async (req, res) => {
-  // try {
-  //   const senderId = req.headers.senderid;
-  //   const receiverId = req.headers.receiverid;
-  //   // console.log(req.headers," req===========")
-
-  //   // const conversations = await Conversation.find({ members: userId })
-  //   //   .populate("members", "fullName profilePicture username isOnline")
-  //   //   .sort({ updatedAt: -1 });
-
-  //     const conversations = await Conversation.findOne({
-  //       members: { $all: [senderId, receiverId] }, // ✅ dono hone chahiye members me
-  //       // isGroupChat: false // Optional: agar sirf one-to-one chahiye
-  //     });
-
-  //     console.log(conversations,"=========Conversation")
-
-  //   res.status(200).json(conversations);
-  // } catch (error) {
-  //   console.log("getUserConversations error:", error.message);
-  //   res.status(500).json({ message: "Internal Server Error" });
-  // }
-
+ 
   try {
     const senderId = req.headers.senderid;
     const receiverId = req.headers.receiverid;
@@ -205,13 +197,341 @@ const getOnlineUsers = async (req, res) => {
     const users = await User.find({}).select(
       "fullName profilePicture username isOnline"
     ).lean().exec();
-    console.log("0--=-=-=-=",users)
-    res.status(200).json({users});
+    console.log("0--=-=-=-=", users)
+    res.status(200).json({ users });
   } catch (err) {
     console.log("getOnlineUsers error:", err.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+const getUnreadMessageCount = async (req, res) => {
+  try {
+    const userId = req.headers.userid; // or `req.user.id` if using auth middleware
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID missing in headers" });
+    }
+   
+
+    const count = await Messages.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    });
+ 
+
+    res.status(200).json({ unreadCount: count });
+  } catch (error) {
+    console.log("getUnreadMessageCount error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// ✅ Mark individual message as read
+const markMessageAsRead = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+
+    const updated = await Messages.findByIdAndUpdate(
+      messageId,
+      { isRead: true },
+      { new: true }
+    );
+
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("markMessageAsRead error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+// const getUnreadCountPerConversation = async (req, res) => {
+//   try {
+//     const userId = req.headers.userid;
+
+//     const unreadCounts = await Messages.aggregate([
+//       {
+//         $match: {
+//           receiverId: userId,
+//           isRead: false,
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: "$conversation",
+//           count: { $sum: 1 },
+//         },
+//       },
+//     ]);
+
+//     // Result: [ { _id: "conversationId", count: 2 }, ... ]
+//     res.status(200).json(unreadCounts);
+//   } catch (err) {
+//     console.error("getUnreadCountPerConversation error:", err.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+const getUnreadCountPerConversation = async (req, res) => {
+  try {
+    const userId = req.headers.userid;
+
+    if (!userId) {
+      return res.status(400).json({ message: "Missing userid in headers" });
+    }
+
+    const messages = await Messages.find({
+      receiverId: userId,
+      isRead: false,
+    });
+
+    const unreadMap = {};
+
+    messages.forEach((msg) => {
+      const id1 = msg.senderId.toString();
+      const id2 = msg.receiverId.toString();
+      const conversationId = [id1, id2].sort().join("_");
+
+      unreadMap[conversationId] = (unreadMap[conversationId] || 0) + 1;
+    });
+
+    const result = Object.entries(unreadMap).map(([conversationId, count]) => ({
+      conversationId,
+      count,
+    }));
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("getUnreadCountPerConversation error:", err.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+// Mark all unread messages in a conversation as read for a user
+// const markConversationMessagesAsRead = async (req, res) => {
+//   try {
+//     const { conversationId } = req.params;
+//     const userId = req.headers.userid;
+
+//     if (!userId) {
+//       return res.status(400).json({ message: "User ID missing" });
+//     }
+
+//     const result = await Messages.updateMany(
+//       {
+//         conversation: conversationId,
+//         receiverId: userId,
+//         isRead: false,
+//       },
+//       { isRead: true }
+//     );
+
+//     res.status(200).json({ modifiedCount: result.modifiedCount });
+//   } catch (error) {
+//     console.error("markConversationMessagesAsRead error:", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+// const markConversationMessagesAsRead = async (req, res) => {
+//   try {
+//     const { conversationId } = req.params;
+//     const userId = req.headers.userid;
+
+//     console.log("Marking as read:", { conversationId, userId });
+
+//     if (!userId) {
+//       return res.status(400).json({ message: "User ID missing" });
+//     }
+
+//     const result = await Messages.updateMany(
+//       {
+//         conversation: conversationId, // this line gives error
+//         receiverId: userId,
+//         isRead: false,
+//       },
+//       { isRead: true }
+//     );
+
+//     console.log("Update result:", result);
+//     if (io) {
+//       io.to(userId).emit("unreadMessageCount", unreadCount);
+//       console.log(`📢 Sent unreadMessageCount (${unreadCount}) to ${userId}`);
+//     }
+
+
+//     res.status(200).json({ modifiedCount: result.modifiedCount });
+//   } catch (error) {
+//     console.error("markConversationMessagesAsRead error:", error);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+// const markConversationMessagesAsRead = async (req, res) => {
+//   try {
+//     const { conversationId } = req.params; // e.g., 'userA_userB'
+//     const userId = req.headers.userid;
+    
+
+//     if (!userId || !conversationId) {
+//       return res.status(400).json({ message: "Missing userId or conversationId" });
+//     }
+
+//     // Split the room ID
+//     const [userA, userB] = conversationId.split("_");
+
+//     // Validate ObjectId format
+//     if (
+//       !mongoose.Types.ObjectId.isValid(userA) ||
+//       !mongoose.Types.ObjectId.isValid(userB) ||
+//       !mongoose.Types.ObjectId.isValid(userId)
+//     ) {
+//       return res.status(400).json({ message: "Invalid ObjectId(s)" });
+//     }
+
+//     // Find the actual conversation
+//     const conversation = await Conversation.findOne({
+//       members: {
+//         $all: [
+//           new mongoose.Types.ObjectId(userA),
+//           new mongoose.Types.ObjectId(userB),
+//         ],
+//       },
+//       isGroupChat: false,
+//     });
+
+//     if (!conversation) {
+//       return res.status(404).json({ message: "Conversation not found" });
+//     }
+
+//     // Update unread messages for this user in this conversation
+//     const result = await Messages.updateMany(
+//       {
+//         conversation: conversation._id,
+//         receiverId: new mongoose.Types.ObjectId(userId),
+//         isRead: false,
+//       },
+//       { $set: { isRead: true } }
+
+//     );
+    
+//   // 🔄 Recalculate unread message count for the user
+   
+
+//     res.status(200).json({ modifiedCount: result.modifiedCount });
+//   } catch (error) {
+//     console.error("🔥 Error marking messages as read:", error);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+const markConversationMessagesAsRead = async (req, res) => {
+  try {
+    const { conversationId } = req.params; // e.g., 'userA_userB'
+    const userId = req.headers.userid;
+
+    if (!userId || !conversationId) {
+      return res.status(400).json({ message: "Missing userId or conversationId" });
+    }
+
+    // Split the conversationId (room ID)
+    const [userA, userB] = conversationId.split("_");
+
+    // Validate ObjectId format
+    if (
+      !mongoose.Types.ObjectId.isValid(userA) ||
+      !mongoose.Types.ObjectId.isValid(userB) ||
+      !mongoose.Types.ObjectId.isValid(userId)
+    ) {
+      return res.status(400).json({ message: "Invalid ObjectId(s)" });
+    }
+
+    // Find the actual conversation document
+    const conversation = await Conversation.findOne({
+      members: {
+        $all: [
+          new mongoose.Types.ObjectId(userA),
+          new mongoose.Types.ObjectId(userB),
+        ],
+      },
+      isGroupChat: false,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    // Update unread messages for this user in this conversation
+    const result = await Messages.updateMany(
+      {
+        conversation: conversation._id,
+        receiverId: new mongoose.Types.ObjectId(userId),
+        isRead: false,
+      },
+      { $set: { isRead: true } }
+    );
+
+    // Recalculate unread message count for the user after marking read
+    const unreadCount = await Messages.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    });
+
+    // Emit the updated unread count via socket to the user
+    req.app.get("io").to(userId).emit("unreadMessageCount", unreadCount);
+    console.log(`📢 Sent updated unreadMessageCount (${unreadCount}) to user ${userId}`);
+
+    res.status(200).json({ modifiedCount: result.modifiedCount });
+  } catch (error) {
+    console.error("🔥 Error marking messages as read:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// const markConversationMessagesAsRead = async (req, res) => {
+//   try {
+//     const { conversationId } = req.params;
+//     const userId = req.headers.userid;
+//     const io = req.io;
+
+//     if (!userId) {
+//       return res.status(400).json({ message: "User ID missing" });
+//     }
+
+//     // Parse and validate ObjectId
+//     if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+//       return res.status(400).json({ message: "Invalid conversation ID" });
+//     }
+
+//     // Update unread messages
+//     const result = await Messages.updateMany(
+//       {
+//         conversation: new mongoose.Types.ObjectId(conversationId),
+//         receiverId: new mongoose.Types.ObjectId(userId),
+//         isRead: false,
+//       },
+//       { $set: { isRead: true } }
+//     );
+
+//     // 🔄 Recalculate unread message count for the user
+//     const unreadCount = await Messages.countDocuments({
+//       receiverId: userId,
+//       isRead: false,
+//     });
+
+//     // 📤 Emit the new unread count via socket to the user room
+//     if (io) {
+//       io.to(userId).emit("unreadMessageCount", unreadCount);
+//       console.log(`📢 Sent unreadMessageCount (${unreadCount}) to ${userId}`);
+//     }
+
+//     res.status(200).json({ modifiedCount: result.modifiedCount });
+//   } catch (error) {
+//     console.error("❌ markConversationMessagesAsRead error:", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+
+
 
 module.exports = {
   getMessages,
@@ -219,4 +539,9 @@ module.exports = {
   getUserConversations,
   createOrGetConversation,
   getOnlineUsers,
+  getUnreadMessageCount, markMessageAsRead, getUnreadCountPerConversation, markConversationMessagesAsRead
 };
+
+
+
+

@@ -14,6 +14,7 @@ const updatePassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         existingUser.password = hashedPassword;
         await existingUser.save();
+        console.log(hashedPassword)
 
         setTimeout(() => {
             res.status(200).json({ message: 'Password updated successfully' });
